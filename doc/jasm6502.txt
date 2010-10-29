@@ -31,6 +31,8 @@ Invoke jasm6502 from the shell with one source file to assemble as parameter.
 Example:
 
 $ java jasm6502 source.asm
+	or
+$ java -jar jasm6502.jar source.asm
 
 The resulting binary will be source.bin.
 
