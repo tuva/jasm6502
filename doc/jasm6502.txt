@@ -1,0 +1,409 @@
+jasm6502 - A portable cross assembler for 6502 based systems.
+(c) David Schager 2006 (d.schager@gmail.com)
+version 0.6.2
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Contents
+
+1. Usage
+2. Features
+	2.1 Labels
+	2.2 Expressions
+	2.3 Identifiers
+	2.4 Special operators
+	2.5 Strings and values
+	2.6 Origin addresses
+	2.7 Include files
+	2.8 Procedures
+	2.9 Comments
+3. Supported directives
+4. bugs
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+1. Usage
+
+You need have a java runtime installed to use jasm6502.
+jasm6502 was developed with java version 1.4.
+
+Invoke jasm6502 from the shell with one source file to assemble as parameter.
+Example:
+
+$ java jasm6502 source.asm
+
+The resulting binary will be source.bin.
+
+Further commandline options:
+-f <format>
+        <format> can be:
+        screen  - Output assembly to screen
+        raw     - Output to raw binary file
+        c64     - Output to Commodore 64 .prg file
+-o <output file name>
+-t <translate ascii> (Translates to commodore 64 screencodes)
+        <translate ascii> can be:
+        upper   - Translate to upper case (Default in c64 format)
+        lower   - Translate to lower case
+        none    - Supress translation
+        
+The translation to upper case/lowercase is needed when outputting strings directly to screen memory in c64.
+If using kernels CHROUT ($ffd2) use no ascii translation.
+
+Example:
+
+$ java jasm6502 -f c64 source.asm
+This will assemble source.asm and output a Commodore 64 emulated tape file, with filename source.prg.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+2. Features
+
+jasm6502 understands the standard set of 6502 opcodes.
+Sourcefiles without specified origin address defaults to origin $1000.
+A list of jasm6502 current features follows.
+
+2.1.1 Labels
+-------------------------------------------------------------
+
+Labels in the source can be defined at any point.
+Label names should have colons as postfix, but it is not necessary.
+Any word in the source not defined as a keyword will be interpreted as a label,
+when defined on a single line, or before a valid statement, as long as they are declared
+in the first column of the line.
+
+Example:
+
+label1:		lda #<string			; valid label "label1"
+			sta addr
+			lda #>string
+			sta addr
+			jsr output_string
+			rts
+string							; valid label "string", no postfix but still valid since declared on col 1.
+		.byt "hello world", 0
+	addr	.word 0				; invalid label "addr", because no postfix colon and not declared on col 1.
+
+
+2.1.2 Anonymous Labels
+-------------------------------------------------------------
+
+Anonymous labels can be specified any number of times.
+Theese labels are specified by using the anynynous label operator, which
+is defined as at-sign, or at-sign followed by a colon.
+The anonymous labels can be jumped to by using at-sign followed by f or b,
+meaning forward or backwards (- or + is synonymous). Anonymous labels are helpful in that you 
+don't need come up with new label names.
+Example:
+
+		ldx #0
+@:		lda $1000, x
+		cmp #0
+		beq @f			; jumps forward to next anonymous label
+		sta $0400, x
+		inx
+		bpl @b			; jumps backward to previous anonymous label
+@:		rts
+
+2.2 Expressions
+-------------------------------------------------------------
+
+Expressions can be used at almost any point. But the results need fit the operand size if
+used with opcodes, either 8 or 16 bits depending on the addressing mode.
+Supported operators are
+
++ : binary addition
+- : binary subtraction
+- : unary minus (\ is also valid)
+/ : divide
+* : multiplication (or current address if used as factor)
+< : unary low byte of expression
+> : unary high byte of expression
+& : bitwise and
+| : bitwise or
+^ : bitwise exclusive or
+<<: bitwise shift left
+>>: bitwise shift right
+~ : bitwise not
+
+Expressions may be within any number of parentheses.
+
+The presedence of the operators are evaluated as follows: (higher level evaluated before lower)
+
+level		operators
+3			~ < > unary -
+2			* / << >> & ^
+1			+ - |
+
+-------------------------------------------------------------
+
+2.3 Identifiers
+
+Identifiers may be specified and assigned values from constants, labels or expressions.
+The identifier names must start with a letter, and may contain digits or underlines.
+Example:
+
+var1 = $02
+var2 = buffer
+
+		lda var1
+		inx
+		sta buffer, x
+		rts
+buffer:
+
+-------------------------------------------------------------
+
+2.4 Special operators
+
+Some operators have special meaning to jasm6502.
+
+The # operator
+
+Specifies that the following expression is a byte constant, and not an address in ram.
+This is used to differ between immediate mode and other addressing modes refering to ram.
+Example:
+
+lda #5		; load accumulator with the value 5
+lda 5		; load accumulator with the contents at memory address $0005
+
+The $ operator
+
+Acts as a hexadecimal radix operator specifying that the constant that must follow, is base 16.
+Without this operator all constants are evaluated as decimal.
+Example:
+
+lda $c000	; load accumulator with the contents at memory address $c000 (49152)
+
+The % operator
+
+Acts as a binary radix operator specifying that the constant that must follow, is in base 2.
+Example:
+and #%1111111	; and accumulator with value 127
+
+The * operator
+
+When appearing as a factor instead of multiplication operator in expression or elsewhere,
+it acts like the current address in source. 
+
+Example:
+
+lda *		; load accumulator with the contents of the address at this point.
+bne * + 2	; branch to next address.
+
+The < and > operators
+
+Theese operators when used before an expression or constant, takes the low and high bytes results,
+respectively. This may be used when storing 16 bit values to ram.
+Example that stores the 16 bit address of label message, to address $1000.
+
+lda #<label
+sta $1000
+lda #>label
+sta $1001
+rts
+
+message: 
+	.byt "a message", 0
+	
+-------------------------------------------------------------
+
+2.5 Strings and values
+
+Strings and values might be embedded in the source, and assembled to binary.
+The .byt directive is used to define ascii strings and 8 bit values, and might be
+mixed and separated by comma.
+Example:
+
+.byt "message", 0					; A zero terminated ascii string
+.byt 10								; 8 bit value 10
+.byt $0, $ff, $fe, 256				; some mixed 8 bit values
+.word $c000							; 16 bit value 49152
+.word label1, label2, label3		; labels will be interpreted as their 16 bit addresses
+
+-------------------------------------------------------------
+
+2.6 origin addresses
+
+The origin address might at any point be set with .org or *= directives with the following restrictions:
+the origin cannot be set to an address behind the current one, thus it is not possible begin source code
+at $2000 and then at some point in source set origin to $1000.
+A second restriction is that the origin might not be set to zero page, in other words origin must 
+be equal to or above $100.
+
+If the origin address is set forward, the space between last assembled opcode and the opcodes that
+assembles at the new origin address, will be filled with zeros.
+
+Example:
+
+* = $1000			; Assemble code to $1000
+		lda $02
+		sta $c000
+		rts
+* = $2000			; Assemble following code to $2000 (zeros will be stuffed between here and previous code)
+		and #ff
+		
+-------------------------------------------------------------
+
+2.7 include files
+
+By using the include directive additional source files might be included in the source file that is assembled.
+Theese will be assembled as well, like if their contents were injected at the point in the source file they were
+included. Note that since of this fact, it is important to end each source file that is included with a new line
+character. If not, the assembler might see the last statement in the included file merged by another statement in current file.
+
+Example:
+
+*=$1000
+		jmp start					; jump past included code, to label start.
+
+		include "routines.asm"		; include file routines.asm
+		include "constants.asm"		; include file constants.asm
+
+start:	jsr my_super_routine		; call one of the routines defined in routines.asm
+		lda #data					; load accumulator with one of constants defined in constants.asm
+		
+-------------------------------------------------------------
+
+2.8 Procedures and scoping
+
+Additional levels of scoping can be achieved by using the Procedure directive ".proc".
+The syntax is:
+.proc procedure_name
+	; ...
+.endproc
+
+The procedure directive has to be matched by the End Procedure directive ".endproc".
+All labels and identifiers that are defined inside the .proc/.endproc block are not visible to the outside.
+The code inside the .proc/.endproc block does have access to labels/identifiers below the procedures scope.
+Labels and identifiers defined inside a procedure can have same name as outside labels without errors.
+Nested procedures are allowed.
+Creating a procedure effectively creates a new namespace for that procedure and all of its nested procedure.
+Anonymous labels defined inside procedure blocks are local as well.
+
+Example 1:
+
+lab1:	lda #<lab1
+		ldx #>lab1
+		jsr a_procedure
+		jmp @f				; jumps past proc to next local label
+		
+		.proc a_procedure	; start procedure
+			lab1:	ldy #0	; lab1 defined as local to procedure, not colliding with outside lab1
+			; ....more code...
+			@:		rts		; Anonymous labels are local to procedure as well.
+		.endproc			; end procedure
+
+@:		; ..more code...
+
+-------------------------------------------------------------
+
+2.9 Comments
+
+Comments can be added by using characters ; or !.
+Everything on a line following the comment-character, is ignored by the assembler.
+Example:
+
+; This is a comment
+! This is also a comment
+	lda #0
+	sta $d020	; comments after statement
+	sta $d021	! comments after statement
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+3. Supported directives
+
+The assembler understands the following directives
+-------------------------------------------------------------
+
+* = address
+Assign a new origin address
+
+Example:
+* = $c000
+
+Synonymous with
+.org
+org
+
+-------------------------------------------------------------
+
+.byt
+
+Declare one or more 8 bit byte values or strings hardcoded in the source.
+
+Example:
+.byt "hello", 0, 1, label
+
+Synonymous with
+byt
+.byte
+byte
+.asc
+asc
+.db
+db
+
+-------------------------------------------------------------
+
+.word
+
+Declare one or more 16 bit word values
+
+Example:
+.word $1000, $2000, 0, label
+
+Synonymous with
+word
+.dw
+dw
+-------------------------------------------------------------
+
+.include
+
+Include a source file into the current file.
+
+Example:
+.include "another_source.asm"
+
+Synonymous with
+include
+#include
+
+-------------------------------------------------------------
+
+.proc <procedure name>
+
+Starts a new procedure block.
+All labels/identifiers are local to the block.
+Nested procedures are supported.
+Must be terminated by a matching .endproc
+
+Example:
+.proc my_procedure
+	; ...
+.endproc
+
+Synonymous with
+.scope
+
+-------------------------------------------------------------
+
+.endproc
+
+Ends the current procedure block.
+All labels/identifiers that were defined inside the block will not 
+be visible anymore.
+
+Synonymous with
+.endscope
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+4. Bugs
+	File including recursion is not fixed. If a file should include itself, it will hang until java runs out of memory.
+	
+	Assembler never takes upper bound on assembly, thus assembler binaries might exceed 64 kb.
+
+

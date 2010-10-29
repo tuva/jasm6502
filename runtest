@@ -1,0 +1,3 @@
+#!/bin/sh
+java junit.textui.TestRunner JasmTest
+exit 0

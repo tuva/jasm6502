@@ -1,0 +1,33 @@
+; test evaluation engine in assembler.
+; Invoke with the secret option -eee:
+; java jasm6502 -eee eval.txt
+
+; | operation                           | expected result
+; try some unary operators
+-5 * 2					; -10
+-(5 * 2)				; -10
+-5 * -2					; 10
+-2 - -2					; 0
+99					; 99
+<10					; 10
+>10					; 0
+<$c010					; 16
+>$c010					; 192 
+
+; try some mixed expressions 
+1 - 5 * 3				; -14
+1 - 9 / 3				; -2
+2 + 2					; 4
+4 + 4					; 8
+5 + (5 - 2)				; 8
+3+(5-(9/3+(55*5-3-5-9)*3/5)+15)-3	; -137
+3*3*3*3-55-(99/9)			; 15
+(55+(5-5))				; 55
+
+; try bitwise operations
+255 & $7f				; 127
+8 | 7					; 15
+1 << 7					; 128
+128 >> 7				; 1
+
+
