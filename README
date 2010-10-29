@@ -1,0 +1,53 @@
+jasm6502 - A portable cross assembler for 6502 based systems.
+(c) David Schager 2006 (d.schager@gmail.com)
+version 0.6.2
+http://github.com/tuva/jasm6502
+
+README
+
+Program description:
+--------------------
+jasm6502 is a cross assembler running on any java enabled platform.
+The assembler, when properly set up and invoked from the command line, is capable of compiling one or multiple sourcefile into a binary for 6502 cpu based systems.
+The features includes the essential utilities such as labels, basic mathematical expressions, identifiers, byte/word strings, and nestable procedures with their own namespace.
+Any block of 6502 assembler source text may be output to a given origin in the binary. Unused space is padded with zeroes.
+
+Compiling:
+----------
+You need java sdk version 1.4 and higher installed, and have the java compiler (javac) in your path.
+Then use the command line to change into the jasm6502 source code directory and enter either:
+
+$ javac AbstractAssembler.java AbstractLexer.java AbstractParser.java AsciiTranslator.java Assembler6502.java C64LowerCaseTranslator.java C64UpperCaseTranslator.java Evaluator.java InfixToPostfix.java jasm6502.java Lexer6502.java LexerException.java MachineCode6502.java Namespace.java Parser6502.java ParserException.java Symbol.java SymbolConstant6502.java SymbolTable.java
+
+or
+
+$ jar cvfm jasm6502.jar manifest AbstractAssembler.class AbstractLexer.class AbstractParser.class AsciiTranslator.class Assembler6502.class C64LowerCaseTranslator.class C64UpperCaseTranslator.class Evaluator.class InfixToPostfix.class jasm6502.class Lexer6502.class LexerException.class MachineCode6502.class Namespace.class Parser6502.class ParserException.class Symbol.class SymbolConstant6502.class SymbolTable.class
+
+To produce a normal compilation, or a jar file. 
+
+Running:
+--------
+
+First put the directory containing the compiled jasm6502 class files/jar-file in your PATH variable.
+If you compiled jasm6502 into a jar, another option is copying the jar directly into the directory containing the 6502 source files you will assemble.
+Then invoke jasm6502,
+$ java jasm6502 source.asm
+	or
+$ java -jar jasm6502 source.asm
+
+Invoking without a source file argument will produce a simple message on usage and program arguments.
+For instructions on the features and format of the input 6502 assembler source files,
+see the documentations in ./doc/jasm6502.txt (or instructions.txt if you downloaded the binary package)
+
+
+Disclamer:
+----------
+This software is provided free of charge, with no warranty what so ever.
+The author takes no responsibility on its usage, its functionality or any other possible event it may involve.
+Use it on your own risk.
+
+This README was written 2010/10/29.
+
+d.schager@gmail.com
+http://github.com/tuva/jasm6502
+
